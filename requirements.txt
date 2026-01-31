@@ -1,0 +1,7 @@
+requests
+streamlit
+pandas
+qdrant-client
+sentence-transformers
+Pillow
+torch
