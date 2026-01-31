@@ -1,0 +1,20 @@
+__pycache__/
+
+# Streamlit secret files
+.streamlit/
+
+# Dataset
+*.csv
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Other
+.DS_Store
