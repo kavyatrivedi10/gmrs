@@ -3,7 +3,7 @@ import streamlit as st
 
 # CORRECT: Use the names of the keys you defined in secrets.toml
 client = QdrantClient(
-    url=st.secrets["QDRANT_URL"], 
+    url=st.secrets["QDRANT_URL"],
     api_key=st.secrets["QDRANT_KEY"]
 )
 

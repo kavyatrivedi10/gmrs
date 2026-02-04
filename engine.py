@@ -6,7 +6,7 @@ from io import BytesIO
 from qdrant_client import QdrantClient, models
 
 class GMRS_Engine:
-    def __init__(self, qdrant_url, qdrant_key, collection_name="flipkart_local_clip"):
+    def __init__(self, qdrant_url, qdrant_key, collection_name):
         self.collection_name = collection_name
 
         # Connect to Qdrant

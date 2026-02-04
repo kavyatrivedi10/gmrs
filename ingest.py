@@ -3,10 +3,13 @@ import streamlit as st
 import ast
 from qdrant_client import models
 from engine import GMRS_Engine
+from get_embedded_ids import get_embedded_ids
+import os
 
 # --- CONFIG ---
 QDRANT_URL = st.secrets["QDRANT_URL"]
 QDRANT_KEY = st.secrets["QDRANT_KEY"]
+COLLECTION_NAME = "flipkart_local_clip"
 
 def clean_image_url(image_str):
     try:
@@ -23,11 +26,11 @@ def main():
     """
     Ingests CSV into Qdrant Collection.
     This may be a lengthy process.
-    Thus, also maintains a progress log in files `embedded.txt` & `skipped.txt`.
+    Thus, also maintains a log of failures in file `skipped.txt`.
     """
     print("🚀 Starting Local Ingestion...")
     # Initialize Local Engine
-    engine = GMRS_Engine(QDRANT_URL, QDRANT_KEY)
+    engine = GMRS_Engine(QDRANT_URL, QDRANT_KEY, COLLECTION_NAME)
     engine.ensure_collection()
 
     try:
@@ -36,17 +39,23 @@ def main():
         print("❌ CSV not found.")
         return
 
-    # Check progress till now
+    last_embedded: int
     try:
-        embedded = engine.client.get_collection(engine.collection_name).points_count
-    except:
-        embedded = 0
-    skipped = sum(1 for _ in open("skipped.txt", "rb"))
-    current_count = embedded + skipped
-    print(f"ℹ️ Resuming from index {current_count}...")
-    with open("embedded.txt", "a") as embedded_log, open("skipped.txt", "a") as skip_log:
+        last_embedded = max(get_embedded_ids(engine), default=-1)
+    except Exception as e:
+        print(f"⚠️ Failed to retrieve embedded ids.\n\t{e}")
+        last_embedded = -1
+
+    if os.path.exists("skipped.txt"):
+        last_skipped = max((int(x) for x in open("skipped.txt", "rb+")), default=-1)
+    else:
+        last_skipped = -1
+    last_touched = max(last_embedded, last_skipped)
+    print(f"ℹ️ Resuming from index {last_touched + 1}...")
+
+    with open("skipped.txt", "a") as log:
         # Loop
-        for idx, row in df.iloc[current_count:].iterrows():
+        for idx, row in df.iloc[last_touched + 1:].iterrows():
             image_url = clean_image_url(row['image'])
             desc = f"{row['product_name']} {row['description']}"[:500] # Truncate to avoid model overflow
 
@@ -56,8 +65,8 @@ def main():
                 image_vec = engine.get_image_embedding(image_url) if image_url else None
                 vector_dict["image_vec"] = image_vec
             except Exception as e:
-                print(f"⚠️ Embedding error at index {idx}: {e}")
-                skip_log.write(f"{idx}\n")
+                print(f"⚠️ Embedding error at index {idx}.\n\t{e}")
+                log.write(f"{idx}\n")
                 continue
             text_vec = engine.get_text_embedding(desc)
             vector_dict["text_vec"] = text_vec
@@ -81,13 +90,13 @@ def main():
                 )
             except Exception as e:
                 print(f"❌ Upsert error at index {idx}: {e}")
-                skip_log.write(f"{idx}\n")
+                log.write(f"{idx}\n")
                 continue
 
             # Print progress for the user to see
-            if idx % 10 == 0:
+            if idx % 20 == 0:
                 print(f"✅ Indexed {idx}")
-            embedded_log.write(f"{idx}\n")
+            log.write(f"{idx}\n")
 
 if __name__ == "__main__":
     main()

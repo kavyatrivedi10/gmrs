@@ -3,16 +3,19 @@ from engine import GMRS_Engine
 from feedback_loop import generative_feedback_loop
 
 # --- SETUP ---
-st.set_page_config(page_title="Unified AI Search", layout="wide")
-
+COLLECTION_NAME = "flipkart_local_clip"
 try:
     engine = GMRS_Engine(
         st.secrets["QDRANT_URL"],
-        st.secrets["QDRANT_KEY"]
+        st.secrets["QDRANT_KEY"],
+        COLLECTION_NAME
     )
 except KeyError as e:
     st.error("Missing secrets. Please check .streamlit/secrets.toml")
     st.stop()
+
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Unified AI Search", layout="wide")
 
 # --- SIDEBAR ---
 with st.sidebar:
